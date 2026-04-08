@@ -10,7 +10,7 @@ export const maxDuration = 30
 export async function POST(request: NextRequest) {
   try {
     // Auth check
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

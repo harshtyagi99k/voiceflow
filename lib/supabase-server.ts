@@ -2,26 +2,34 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
-export function createServerSupabaseClient() {
-  const cookieStore = cookies()
+// ✅ FIX: async function
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies()
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) { return cookieStore.get(name)?.value },
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
         set(name: string, value: string, options: any) {
-          try { cookieStore.set({ name, value, ...options }) } catch {}
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch {}
         },
         remove(name: string, options: any) {
-          try { cookieStore.set({ name, value: '', ...options }) } catch {}
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch {}
         },
       },
     }
   )
 }
 
-// Admin client with full access (service role)
+// Admin client (no change needed)
 export function createAdminSupabaseClient() {
   return createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

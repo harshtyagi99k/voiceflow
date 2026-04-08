@@ -1,25 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAdminSupabaseClient } from '@/lib/supabase-server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { NextResponse } from 'next/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET() {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    // ✅ IMPORTANT: await lagana hai
+    const supabase = await createServerSupabaseClient()
 
-  const admin = createAdminSupabaseClient()
-  const { data: profile } = await admin
-    .from('profiles').select('*').eq('id', user.id).single()
+    // ✅ Get logged-in user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
-  const { data: transactions } = await admin
-    .from('credit_transactions')
-    .select('*').eq('user_id', user.id)
-    .order('created_at', { ascending: false }).limit(20)
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-  const { data: generations } = await admin
-    .from('tts_generations')
-    .select('*').eq('user_id', user.id)
-    .order('created_at', { ascending: false }).limit(20)
+    // ✅ Admin client (DB access)
+    const admin = createAdminSupabaseClient()
 
-  return NextResponse.json({ profile, transactions, generations })
+    // ✅ Fetch credits from DB (table name adjust kar sakta hai)
+    const { data, error } = await admin
+      .from('users') // ⚠️ ensure table name correct hai
+      .select('credits')
+      .eq('id', user.id)
+      .single()
+
+    if (error) {
+      return NextResponse.json(
+        { error: 'Failed to fetch credits' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      credits: data?.credits || 0,
+    })
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Server error' },
+      { status: 500 }
+    )
+  }
 }

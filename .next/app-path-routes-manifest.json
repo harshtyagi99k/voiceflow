@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/api/admin/route": "/api/admin",
+  "/api/credits/route": "/api/credits",
+  "/api/payment/route": "/api/payment",
+  "/api/tts/route": "/api/tts",
+  "/auth/callback/route": "/auth/callback",
+  "/contact/page": "/contact",
+  "/dashboard/page": "/dashboard",
+  "/generate/page": "/generate",
+  "/login/page": "/login",
+  "/page": "/",
+  "/pricing/page": "/pricing",
+  "/signup/page": "/signup"
+}
