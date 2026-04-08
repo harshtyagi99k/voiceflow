@@ -31,8 +31,7 @@ export default function SignupPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       toast.success('Account created! 500 free credits added 🎉')
-      router.push('/dashboard')
-      router.refresh()
+      window.location.href = '/dashboard'
     } else {
       toast.success('Check karo apna email — confirmation link aaya hoga!')
     }

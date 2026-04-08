@@ -21,8 +21,7 @@ export default function LoginPage() {
     setLoading(false)
     if (error) return toast.error(error.message)
     toast.success('Welcome back!')
-    router.push('/dashboard')
-    router.refresh()
+    window.location.href = '/dashboard'
   }
 
   const handleGoogleLogin = async () => {
