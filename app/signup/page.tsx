@@ -26,14 +26,22 @@ export default function SignupPage() {
     })
     setLoading(false)
     if (error) return toast.error(error.message)
-    toast.success('Account created! 500 free credits added 🎉')
-    router.push('/dashboard')
+
+    // Check if session exists (email confirm OFF) or need to confirm
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      toast.success('Account created! 500 free credits added 🎉')
+      router.push('/dashboard')
+      router.refresh()
+    } else {
+      toast.success('Check karo apna email — confirmation link aaya hoga!')
+    }
   }
 
   const handleGoogleSignup = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` }
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` }
     })
     if (error) toast.error(error.message)
   }

@@ -2,7 +2,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next()
+  // NEVER block these paths — auth needs them to work
+  const pathname = request.nextUrl.pathname
+  if (
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.includes('favicon')
+  ) {
+    return NextResponse.next()
+  }
+
+  let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,37 +23,34 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookies) {
-          cookies.forEach(({ name, value, options }) => {
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
-          })
+          )
         },
       },
     }
   )
 
-  // 👇 IMPORTANT: THIS LINE FIXES SESSION
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const user = session?.user
+  const protectedPaths = ['/dashboard', '/generate', '/admin']
+  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+  const isAuthPage = pathname === '/login' || pathname === '/signup'
 
-  const { pathname } = request.nextUrl
-
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/generate') ||
-    pathname.startsWith('/admin')
-
+  // Not logged in + trying to access protected page → send to login
   if (!user && isProtected) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  // Already logged in + on login/signup page → send to dashboard
+  if (user && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -50,5 +58,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon.ico|api).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
