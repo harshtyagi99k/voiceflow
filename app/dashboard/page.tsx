@@ -20,30 +20,40 @@ export default function DashboardPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    const checkAndLoad = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
 
-      if (!session) {
-        window.location.href = '/login'
-        return
+        // ✅ Logout
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/login'
+          return
+        }
+
+        // ✅ Session mil gaya
+        if (session) {
+          try {
+            const res = await fetch('/api/credits')
+
+            if (!res.ok) {
+              window.location.href = '/login'
+              return
+            }
+
+            const data = await res.json()
+
+            setProfile(data.profile)
+            setGenerations(data.generations || [])
+            setTransactions(data.transactions || [])
+          } catch (e) {
+            console.error(e)
+          }
+
+          setLoading(false)
+        }
       }
+    )
 
-      const res = await fetch('/api/credits')
-
-      if (!res.ok) {
-        window.location.href = '/login'
-        return
-      }
-
-      const data = await res.json()
-
-      setProfile(data.profile)
-      setGenerations(data.generations || [])
-      setTransactions(data.transactions || [])
-      setLoading(false)
-    }
-
-    checkAndLoad()
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleSignOut = async () => {
@@ -54,7 +64,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        Loading dashboard...
       </div>
     )
   }
@@ -62,12 +72,19 @@ export default function DashboardPage() {
   const currentPlan = PLANS[profile?.plan ?? 'free']
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="min-h-screen bg-dark-900">
+      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
 
-        <h1 className="text-2xl font-bold mb-4">
-          Dashboard
-        </h1>
+        {/* Header */}
+        <div className="flex justify-between mb-6">
+          <h1 className="text-2xl text-white font-bold">
+            Dashboard
+          </h1>
+
+          <button onClick={handleSignOut} className="text-white">
+            Logout
+          </button>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -80,7 +97,7 @@ export default function DashboardPage() {
         {/* Tabs */}
         <div className="flex gap-2 mb-4">
           {(['overview', 'history', 'billing'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}>
+            <button key={t} onClick={() => setTab(t)} className="text-white">
               {t}
             </button>
           ))}
@@ -88,19 +105,18 @@ export default function DashboardPage() {
 
         {/* Overview */}
         {tab === 'overview' && (
-          <div>
-            <Link href="/generate">Generate</Link>
-            <br />
+          <div className="text-white space-y-2">
+            <Link href="/generate">Generate Voice</Link><br />
             <Link href="/pricing">Buy Credits</Link>
           </div>
         )}
 
         {/* History */}
         {tab === 'history' && (
-          <div>
+          <div className="text-white">
             {generations.map(g => (
               <div key={g.id}>
-                {truncate(g.text, 30)} - {g.credits_used}
+                {truncate(g.text, 40)} - {g.credits_used}
               </div>
             ))}
           </div>
@@ -108,7 +124,7 @@ export default function DashboardPage() {
 
         {/* Billing */}
         {tab === 'billing' && (
-          <div>
+          <div className="text-white">
             {transactions.map(t => (
               <div key={t.id}>
                 {t.description} - {t.amount}
@@ -116,10 +132,6 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-
-        <button onClick={handleSignOut} className="mt-6">
-          Logout
-        </button>
 
       </div>
     </div>
